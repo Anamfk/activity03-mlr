@@ -18,13 +18,15 @@ You can read more about this output type in RMarkdown's [documentation page](htt
 I encourage you to continue using the two packages from Posit (formerly [RStudio](https://posit.co/)): `{tidyverse}` and `{tidymodels}`.
 Remember that [Emil Hvitfeldt](https://www.emilhvitfeldt.com/) (of Posit) has put together a [complementary online text](https://emilhvitfeldt.github.io/ISLR-tidymodels-labs/index.html) for the labs in the *ISLR* text that utilize `{tidyverse}` and `{tidymodels}` instead of base R.
 
+
+
 - In the **Packages** pane of RStudio, check if `{tidyverse}` and `{tidymodels}` are installed.
   Be sure to check both your **User Library** and **System Library**.
 - If either of these are not currently listed (they should be because you verified this in Activity 1), type the following in your **Console** pane, replacing `package_name` with the appropriate name, and  press Enter/Return afterwards.
   
-  ```{r  eval = FALSE}
+```{r  eval = FALSE}
   install.packages("package_name")
-  ```
+```
 
 - Once you have verified that both `{tidyverse}` and `{tidymodels}` are installed (in either your user or system library), load these packages in the R chunk below titled `load-packages`.
   
@@ -32,7 +34,12 @@ Remember that [Emil Hvitfeldt](https://www.emilhvitfeldt.com/) (of Posit) has pu
 
 ```{r load-packages}
 
+library(tidyverse)
+library(tidymodels)
+library(GGally)
+library(dplyr)
 ```
+
 
 Since we will be looking at many relationships graphically, it will be nice to not have to code each of these individually.
 `{GGally}` is an extension to `{ggplot2}` that reduces some of the complexities when combining multiple plots.
@@ -58,9 +65,28 @@ We can access the raw data from their tab-delimited text file link: https://www.
 
 Create a new R code chunk below that is titled `load-data` and reads in the above linked TSV (tab-separated values) file by doing the following:
 
+
+
 - Rather than downloading this file, uploading to RStudio, then reading it in, explore how to load this file directly from the provided URL with `readr::read_tsv` (`{readr}` is part of `{tidyverse}`).
 - Assign this data set into a data frame named `hfi` (short for "Human Freedom Index").
+
+```{r load-data}
+hfi<- readr::read_csv("hfi.csv")
+```
+
 - Filter the data `hfi` data frame for year 2016 and assigns the result to an R data object named `hfi_2016`. You will use `hfi_2016` for the remainder of this activity.
+
+```{r hfi-2016}
+
+# Filter the data for the year 2016
+hfi_2016 <- hfi %>% 
+  filter(year == 2016)
+
+
+# Display the first few rows of the filtered data
+head(hfi_2016)
+
+```
 
 We will continue using personal freedom scores, `pf_score`, as the response variable and build on our model that had `pf_expression_control` as the explanatory variable. 
 
@@ -68,6 +94,10 @@ Create a new R code chunk below, with an appropriate title, that does the follow
 
 - Review the about page of the data set and select at least one additional numeric variables (hint: look for `<dbl>` or `<int>` designations) to describe its distribution. Remember to write your description.
 - You may also wish to do this for `pf_score` and `pf_expression_control` again to help you remember what you noticed last week.
+
+pf_ss_women_missing
+Missing women
+
 
 ## Pairwise relationships
 
@@ -99,9 +129,9 @@ Now, we will obtain graphical and numerical summaries to describe the pairwise r
 - Replace `explanatory` in the `select` line with the variable you identified above
 - Run your code chunk or knit your document.
   
-```{verbatim pairs-plot}
+```{r pairs-plot}
 hfi_2016 %>% 
-  select(pf_score, pf_expression_control, explanatory) %>% 
+  select(pf_score, pf_expression_control, pf_ss_women_missing) %>% 
   ggpairs()
 ```
 
@@ -136,7 +166,7 @@ $$
 - Replace `explanatory`, similarly to what you did in your `pairs-plot` R code chunk.
 - Run your code chunk or knit your document.
   
-```{verbatim mlr-model}
+```{r mlr-model}
 #fit the mlr model
 lm_spec <- linear_reg() %>%
   set_mode("regression") %>%
@@ -145,7 +175,7 @@ lm_spec <- linear_reg() %>%
 lm_spec
 
 mlr_mod <- lm_spec %>% 
-fit(pf_score ~ pf_expression_control + explanatory, data = hfi_2016)
+fit(pf_score ~ pf_expression_control + pf_ss_women_missing, data = hfi_2016)
 
 # model output
 tidy(mlr_mod)
@@ -157,8 +187,16 @@ After doing this, answer the following questions:
   Remember in Activity 2 that this looked like:
 
 $$
-\hat{y} = b_0 + b_1 \times x_1
+\hat{y} = 2.63 + 0.50 \times \text{pf\\_expression\\_control} + 0.21 \times \text{pf\\_ss\\_women\\_missing}
 $$
+
+
+The y-intercept is `r round(tidy(mlr_mod)$estimate[1], 2)`
+
+$$
+\hat{y} = `r tidy(mlr_mod)$estimate[1]` + 0.50 \times \text{pf\\_expression\\_control} + 0.21 \times \text{pf\\_ss\\_women\\_missing}
+$$
+
   
   where $b_0$ and $b_1$ were your model parameter estimates.
   Note that your model here will be different (and have more terms).
@@ -175,6 +213,11 @@ Ideally, this would be something that plays nicely with (looks similar to) `{ggp
 - Create a new R code chunk, with a descriptive name, and add your code to create this plot.
 
 After doing this, respond to the following prompt:
+
+```{r plot}
+
+```
+
 
 6. Compare your 3-D scatterplot and the `GGally::ggpairs` output.
   Comment on the strengths and weaknesses of these two visualizations.
@@ -199,7 +242,7 @@ $$
 where $y$, $\text{qualitative\\_variable}$, and $\text{quantitative\\_variable}$ are from `hfi_2016`.
 Note that the two explanatory variables can be entered in whatever order.
 
-To help with interpretability, we will focus on qualitative predictor variables with only two levels.
+To help with interoperatibility, we will focus on qualitative predictor variables with only two levels.
 Unfortunately, none of the current `chr` variables have only two levels.
 Fortunately, we can create our own.
 
@@ -207,7 +250,7 @@ Fortunately, we can create our own.
 - In the code chunk below titled `binary-pred`, replace "verbatim" with "r" just before the code chunk title.
 - Run your code chunk or knit your document.
   
-```{verbatim binary-pred}
+```{r binary-pred}
 hfi_2016 <- hfi_2016 %>%
   mutate(west_atlantic = if_else(
     region %in% c("North America", "Latin America & the Caribbean"),
@@ -219,10 +262,22 @@ hfi_2016 <- hfi_2016 %>%
 7. What is happening in the above code? What new variable did we create? How do you know it is new? What values does it take when?
 
 
+The new variable created is named west_atlantic.
+
+
+We can identify the new variable because it is specified on the left side of the = sign in the mutate function (west_atlantic = ...).
+
+The values of the new variable west_atlantic are determined by the if_else function.
+If the region variable is in the set {"North America", "Latin America & the Caribbean"}, then the value of west_atlantic is set to "No".
+Otherwise, if the region variable is not in the specified set, the value of west_atlantic is set to "Yes".
+
+
+
+
 - In the code chunk below titled `qual-mlr`, replace "verbatim" with "r" just before the code chunk title.
 - Run your code chunk or knit your document.
 
-```{verbatim qual-mlr}
+```{r qual-mlr}
 # review any visual patterns
 hfi_2016 %>% 
   select(pf_score, west_atlantic, pf_expression_control) %>% 
@@ -241,10 +296,14 @@ tidy(qual_mod)
 ```
 
 When looking at your `ggpairs` output, remember to ask yourself, "does it make sense to include all of these variables?"
-Specifically, if you notice that the response variables are highly correlated (collinear), including both does not necessarily add much value as they are essentially saying the same thing.
+Specifically, if you notice that the response variables are highly correlated (co linear), including both does not necessarily add much value as they are essentially saying the same thing.
+
 Note: There are more advanced methods to include the variability within a rater for our model - this is beyond STA 631.
+
 If this sounds of interest to you, explore *generalized estimating equations* (GEE) or *generalized linear mixed models* (GLMM).
+
 However, there are often times when we choose to include variables in our model because it is important to us - for various reasons.
+
 Regardless, I encourage you to keep your readings of *DF* in mind - who will benefit by including this information; who will be hurt by including this information? 
 
 Also, when looking at your model (`tidy`) output, the `term` label for your qualitative explanatory variable look odd.
